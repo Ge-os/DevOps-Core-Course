@@ -262,3 +262,17 @@ This service will be used in future labs for:
 ## License
 
 Educational project for DevOps course.
+
+## Docker Support
+
+### Build the Image
+Uses multi-stage build:
+```bash
+# From app_java directory
+docker build -t devops-info-service-java .
+```
+
+### Run the Container
+```bash
+docker run -p 8080:8080 devops-info-service-java
+```
