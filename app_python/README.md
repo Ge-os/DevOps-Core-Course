@@ -64,6 +64,35 @@ Once running, access the service at:
 - **Health check**: http://localhost:5000/health
 - **Interactive API docs**: http://localhost:5000/docs
 
+## Docker
+
+### Build the Image
+
+```bash
+docker build -t devops-info-service .
+```
+
+### Run the Container
+
+Run the container mapping port 5000:
+
+```bash
+docker run -p 5000:5000 devops-info-service
+```
+
+### Push to Docker Hub
+
+```bash
+# Login to Docker Hub
+docker login
+
+# Tag the image
+docker tag devops-info-service <your-username>/devops-info-service:v1.0.0
+
+# Push the image
+docker push <your-username>/devops-info-service:v1.0.0
+```
+
 ## API Endpoints
 
 ### GET `/`
