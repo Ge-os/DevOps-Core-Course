@@ -1,5 +1,10 @@
 # DevOps Info Service
 
+![Python CI/CD](https://github.com/ge0s1/DevOps-Core-Course/workflows/Python%20CI/CD/badge.svg)
+![Coverage](https://codecov.io/gh/ge0s1/DevOps-Core-Course/branch/main/graph/badge.svg)
+![Python Version](https://img.shields.io/badge/python-3.13-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688.svg)
+
 A FastAPI-based web service that provides detailed information about itself and its runtime environment. Built as part of the DevOps course, this service will evolve into a comprehensive monitoring tool.
 
 ## Overview
@@ -190,6 +195,69 @@ app_python/
         ├── 02-health-check.png
         └── 03-formatted-output.png
 ```
+
+## Testing
+
+### Running Tests
+
+The application includes comprehensive unit tests using pytest.
+
+**Run all tests:**
+```bash
+pytest
+```
+
+**Run tests with coverage:**
+```bash
+pytest --cov=. --cov-report=term-missing
+```
+
+**Run tests with detailed output:**
+```bash
+pytest -v
+```
+
+**Run specific test file:**
+```bash
+pytest tests/test_app.py
+```
+
+**Run specific test class:**
+```bash
+pytest tests/test_app.py::TestRootEndpoint
+```
+
+**Generate HTML coverage report:**
+```bash
+pytest --cov=. --cov-report=html
+# Open htmlcov/index.html in browser
+```
+
+### Test Structure
+
+Tests are organized by endpoint functionality:
+- `TestRootEndpoint`: Tests for the main `/` endpoint
+- `TestHealthEndpoint`: Tests for the `/health` endpoint
+- `TestErrorHandling`: Tests for error scenarios
+- `TestResponseConsistency`: Tests for response consistency
+
+### Coverage Goals
+
+- **Current Coverage**: 80%+ required
+- Coverage reports are automatically generated in CI/CD pipeline
+- Coverage badge shows current coverage percentage
+
+### Installing Test Dependencies
+
+Test dependencies are included in `requirements.txt`:
+```bash
+pip install -r requirements.txt
+```
+
+Test tools included:
+- `pytest`: Testing framework
+- `pytest-cov`: Coverage plugin
+- `httpx`: HTTP client for testing (FastAPI dependency)
 
 ## Development
 
