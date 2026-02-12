@@ -36,16 +36,16 @@ All application endpoints are comprehensively tested:
 **Total**: 24 comprehensive unit tests
 
 **What's Tested**:
-- ✅ HTTP status codes (200, 404, 405)
-- ✅ Response JSON structure and required fields
-- ✅ Data types and value validation
-- ✅ Request metadata capture (IP, user agent, method, path)
-- ✅ System information accuracy
-- ✅ Health check functionality
-- ✅ Uptime tracking and calculations
-- ✅ Error handling for invalid endpoints
-- ✅ Response consistency across multiple calls
-- ✅ Custom header handling
+- HTTP status codes (200, 404, 405)
+- Response JSON structure and required fields
+- Data types and value validation
+- Request metadata capture (IP, user agent, method, path)
+- System information accuracy
+- Health check functionality
+- Uptime tracking and calculations
+- Error handling for invalid endpoints
+- Response consistency across multiple calls
+- Custom header handling
 
 ### 1.3 CI/CD Workflow Configuration
 
@@ -150,16 +150,16 @@ The workflow generates **multiple tags** per build:
 | **Git SHA** | `lab03-a1b2c3d` | Git commit SHA for exact traceability |
 
 **Why CalVer (Calendar Versioning)**:
-- ✅ Perfect for continuous deployment (service, not library)
-- ✅ No ambiguity about release date
-- ✅ Easy to identify which version is newer
-- ✅ No need to manually decide major/minor/patch changes
-- ✅ Aligns with modern SaaS deployment practices
+- Perfect for continuous deployment (service, not library)
+- No ambiguity about release date
+- Easy to identify which version is newer
+- No need to manually decide major/minor/patch changes
+- Aligns with modern SaaS deployment practices
 
 **Why Not Pure SemVer**:
-- ❌ Requires manual semantic decisions (breaking vs feature vs patch)
-- ❌ Better suited for libraries with strict API compatibility needs
-- ❌ Our service is deployed continuously, not released in discrete versions
+- Requires manual semantic decisions (breaking vs feature vs patch)
+- Better suited for libraries with strict API compatibility needs
+- Our service is deployed continuously, not released in discrete versions
 
 **Hybrid Approach Benefits**:
 - CalVer for primary versioning
@@ -171,7 +171,7 @@ The workflow generates **multiple tags** per build:
 
 ## 4. CI Best Practices Implemented
 
-### 4.1 Dependency Caching ⚡
+### 4.1 Dependency Caching 
 
 **Implementation**:
 ```yaml
@@ -181,17 +181,12 @@ The workflow generates **multiple tags** per build:
     cache-dependency-path: 'app_python/requirements.txt'
 ```
 
-**Benefits**:
-- **Speed**: Reduces dependency installation from ~45s to ~5s (90% faster)
-- **Reliability**: Cached dependencies reduce network failures
-- **Cost**: Fewer CI minutes consumed
-
 **Cache Strategy**:
 - Key based on `requirements.txt` hash
 - Automatic invalidation when dependencies change
 - Shared across all workflow runs
 
-### 4.2 Docker Layer Caching ⚡
+### 4.2 Docker Layer Caching 
 
 **Implementation**:
 ```yaml
@@ -199,26 +194,14 @@ cache-from: type=gha
 cache-to: type=gha,mode=max
 ```
 
-**Benefits**:
-- Docker layers reused between builds
-- Base image (python:3.13-slim) cached
-- Dependencies layer cached
-- **Speed**: Reduces build time from ~4 min to ~1 min on cache hit
-
-### 4.3 Multi-Platform Builds 🌍
+### 4.3 Multi-Platform Builds
 
 **Implementation**:
 ```yaml
 platforms: linux/amd64,linux/arm64
 ```
 
-**Why It Matters**:
-- Works on x86_64 servers (most cloud providers)
-- Works on ARM servers (AWS Graviton, Apple Silicon)
-- **Future-proof**: Industry moving toward ARM
-- **Mandatory** for deployment on Apple Silicon development machines
-
-### 4.4 Job Dependencies & Fail-Fast 🚨
+### 4.4 Job Dependencies & Fail-Fast
 
 **Implementation**:
 ```yaml
@@ -227,13 +210,7 @@ jobs:
     needs: [test, security]
 ```
 
-**Benefits**:
-- Docker build only runs if tests pass
-- Saves time and CI minutes (no building broken code)
-- Clear failure visibility (failed job highlighted)
-- **Fail-fast**: Pipeline stops on first failure
-
-### 4.5 Path-Based Triggers 🎯
+### 4.5 Path-Based Triggers 
 
 **Implementation**:
 ```yaml
@@ -244,25 +221,14 @@ on:
       - '.github/workflows/python-ci.yml'
 ```
 
-**Benefits in Monorepo**:
-- Doesn't run when Java app changes
-- Doesn't run when documentation changes
-- **CI Time Saved**: ~70% reduction in unnecessary builds
-- Faster feedback for developers
-
-### 4.6 Status Badge 📊
+### 4.6 Status Badge 
 
 **Implementation**:
 ```markdown
-![Python CI/CD](https://github.com/ge0s1/DevOps-Core-Course/workflows/Python%20CI/CD/badge.svg)
+![Python CI/CD](https://github.com/ge-os/DevOps-Core-Course/workflows/Python%20CI%2FCD/badge.svg?branch=lab03)
 ```
 
-**Benefits**:
-- Instant visibility of build status in README
-- Confidence for users (green badge = tests pass)
-- Prevents merging broken code (visible in PRs)
-
-### 4.7 Security Scanning with Snyk 🔒
+### 4.7 Security Scanning with Snyk
 
 **Why Snyk**:
 - Checks for known CVEs in dependencies
@@ -277,18 +243,12 @@ args: --file=app_python/requirements.txt --severity-threshold=high
 - Only fails on high/critical vulnerabilities
 - Medium/low vulnerabilities reported but don't block builds
 
-### 4.8 Secrets Management 🔐
+### 4.8 Secrets Management 
 
 **Implementation**:
 ```yaml
 password: ${{ secrets.DOCKER_TOKEN }}
 ```
-
-**Security Practices**:
-- ✅ No hardcoded credentials in workflow files
-- ✅ GitHub Secrets encrypted at rest
-- ✅ Secrets not exposed in logs
-- ✅ Docker Hub access token (not password) for limited scope
 
 **Secrets Configured**:
 - `DOCKER_USERNAME`: Docker Hub username
@@ -302,12 +262,12 @@ password: ${{ secrets.DOCKER_TOKEN }}
 
 ### 5.1 Successful Workflow Run
 
-**GitHub Actions Link**: [View Workflow Run](https://github.com/ge0s1/DevOps-Core-Course/actions)
+**GitHub Actions Link**: [View Workflow Run](https://github.com/ge-os/DevOps-Core-Course/actions)
 
-**Workflow Status**: ✅ All jobs passing
-- ✅ Test & Lint: 24/24 tests passed
-- ✅ Security Scan: No vulnerabilities found
-- ✅ Docker Build & Push: Image published successfully
+**Workflow Status**: All jobs passing
+- Test & Lint: 24/24 tests passed
+- Security Scan: No vulnerabilities found
+- Docker Build & Push: Image published successfully
 
 ### 5.2 Local Test Execution
 
@@ -355,8 +315,6 @@ tests\__init__.py           0      0   100%
 tests\test_app.py         132      0   100%
 -----------------------------------------------------
 TOTAL                     184      0   100%
-
-======================== 24 passed in 0.87s =========================
 ```
 
 **Coverage**: 100% (exceeds 80% requirement)
@@ -365,23 +323,14 @@ TOTAL                     184      0   100%
 
 **Repository**: [ge0s1/devops-python-app](https://hub.docker.com/r/ge0s1/devops-python-app)
 
-**Available Tags**:
-- `latest` (main branch)
-- `lab03` (lab03 branch)
-- `2026.02.12` (CalVer)
-- `lab03-a1b2c3d` (Git SHA)
-
-**Multi-Platform Support**: linux/amd64, linux/arm64
-
 ### 5.4 Status Badges
 
 All badges visible in [app_python/README.md](../README.md):
-- ✅ GitHub Actions workflow status
-- ✅ Code coverage percentage
-- ✅ Python version
-- ✅ FastAPI version
+- GitHub Actions workflow status
+- Code coverage percentage
+- Python version
+- FastAPI version
 
----
 
 ## 6. Key Technical Decisions
 
@@ -483,10 +432,10 @@ docker run ge0s1/devops-python-app
 
 **Solution**:
 ```yaml
-# ❌ Wrong
+# Wrong
 paths: ['app_python/*']     # Only matches immediate children
 
-# ✅ Correct
+# Correct
 paths: ['app_python/**']    # Matches all files recursively
 ```
 
@@ -521,7 +470,7 @@ cache-to: type=gha,mode=max
 ```yaml
 - uses: codecov/codecov-action@v4
   with:
-    token: ${{ secrets.CODECOV_TOKEN }}  # Required!
+    token: ${{ secrets.CODECOV_TOKEN }}
 ```
 
 ### 7.4 Challenge: Snyk Failing on Every Build
@@ -560,18 +509,11 @@ env:
 - GitHub Actions Cache: ~150 MB (pip + Docker layers)
 - Docker Image Size: ~170 MB (multi-platform)
 
-**Monthly Estimate** (10 builds/day):
-- CI Minutes: ~600 minutes/month
-- Cache Storage: ~150 MB (stable)
-- GitHub Actions Free Tier: 2000 minutes/month (sufficient!)
-
----
-
 ## 9. Security Posture
 
 ### 9.1 Dependency Security
 
-**Current Status**: ✅ No vulnerabilities
+**Current Status**: No vulnerabilities
 
 **Dependencies Scanned**:
 - fastapi==0.115.0 (latest stable)
@@ -589,12 +531,12 @@ env:
 ### 9.2 Secrets Management
 
 **Best Practices Applied**:
-- ✅ No secrets in code or configuration files
-- ✅ GitHub Secrets encrypted at rest
-- ✅ Docker Hub token (not password) with minimal scope
-- ✅ Secrets rotation policy (recommend every 90 days)
-- ✅ Secrets not exposed in workflow logs
-- ✅ Limited secret scope (only accessible to specific workflows)
+- No secrets in code or configuration files
+- GitHub Secrets encrypted at rest
+- Docker Hub token (not password) with minimal scope
+- Secrets rotation policy (recommend every 90 days)
+- Secrets not exposed in workflow logs
+- Limited secret scope (only accessible to specific workflows)
 
 **Secrets Inventory**:
 1. `DOCKER_USERNAME`: Docker Hub login
@@ -610,31 +552,29 @@ env:
 - Regular security updates from Debian base
 
 **Security Measures**:
-- ✅ Non-root user (uid 1001)
-- ✅ Minimal dependencies (only runtime requirements)
-- ✅ No unnecessary tools in image
-- ✅ Multi-stage build (from Lab 2, if applicable)
-- ✅ Regular base image updates
-
----
+- Non-root user (uid 1001)
+- Minimal dependencies (only runtime requirements)
+- No unnecessary tools in image
+- Multi-stage build (from Lab 2, if applicable)
+- Regular base image updates
 
 ## 10. Testing Philosophy
 
 ### 10.1 What We Test
 
 **Unit Tests (24 tests)**:
-- ✅ HTTP response structure and content
-- ✅ Status codes for success and error cases
-- ✅ JSON schema validation
-- ✅ Data type correctness
-- ✅ Business logic (uptime calculation, etc.)
-- ✅ Request metadata capture
+- HTTP response structure and content
+- Status codes for success and error cases
+- JSON schema validation
+- Data type correctness
+- Business logic (uptime calculation, etc.)
+- Request metadata capture
 
 **What We Don't Test (and why)**:
-- ❌ External libraries (FastAPI, uvicorn) - Trust framework
-- ❌ Python standard library - Trust language
-- ❌ OS-specific behavior - Use mocks if needed
-- ❌ Network I/O - Use TestClient (in-process)
+- External libraries (FastAPI, uvicorn) - Trust framework
+- Python standard library - Trust language
+- OS-specific behavior - Use mocks if needed
+- Network I/O - Use TestClient (in-process)
 
 ### 10.2 Coverage vs Quality
 
@@ -660,90 +600,8 @@ env:
 5. **Single Assertion Focus**: Each test validates one behavior
 
 **Anti-Patterns Avoided**:
-- ❌ Testing framework functionality
-- ❌ Tests that always pass
-- ❌ Tests without assertions
-- ❌ Tests dependent on execution order
-- ❌ Tests with external dependencies
-
----
-
-## 11. Future Improvements
-
-### 11.1 Potential Enhancements
-
-**For Lab 4+**:
-- [ ] Integration tests (not just unit tests)
-- [ ] Performance/load testing in CI
-- [ ] Automated database migrations
-- [ ] Blue-green deployment strategy
-- [ ] Canary releases with gradual rollout
-- [ ] Automated rollback on failure
-
-**Advanced CI Features**:
-- [ ] Matrix testing (Python 3.11, 3.12, 3.13)
-- [ ] Parallel test execution (`pytest-xdist`)
-- [ ] Mutation testing (quality of tests)
-- [ ] Visual regression testing
-- [ ] API contract testing
-
-**Security Enhancements**:
-- [ ] SAST (Static Application Security Testing)
-- [ ] DAST (Dynamic Application Security Testing)
-- [ ] Container image scanning (Trivy, Grype)
-- [ ] License compliance checking
-- [ ] Secret detection in commits
-
-### 11.2 Production Readiness Checklist
-
-**Current Status**: ✅ Development Ready, 🔶 Production "Good Enough"
-
-**To be Production-Ready**:
-- ✅ Automated testing
-- ✅ Security scanning
-- ✅ Docker containerization
-- ✅ Multi-platform support
-- 🔶 Monitoring and alerting (future labs)
-- 🔶 Logging aggregation (future labs)
-- 🔶 Database persistence (future labs)
-- 🔶 Load balancing and scaling (Kubernetes labs)
-- 🔶 Disaster recovery plan
-
----
-
-## 12. Conclusion
-
-### 12.1 Achievements
-
-This lab successfully implements a **production-grade CI/CD pipeline** with:
-- ✅ 24 comprehensive unit tests (100% coverage)
-- ✅ Automated linting and code quality checks
-- ✅ Security vulnerability scanning
-- ✅ Multi-platform Docker image builds
-- ✅ Intelligent caching (70% faster builds)
-- ✅ Semantic versioning with CalVer
-- ✅ Path-based workflow triggers (monorepo optimization)
-- ✅ Comprehensive documentation
-
-### 12.2 Key Learnings
-
-1. **CI/CD is a Safety Net**: Catches bugs before production
-2. **Caching is Critical**: 70% time savings with proper caching
-3. **Security is Not Optional**: Automated scanning prevents vulnerabilities
-4. **Tests Must Be Meaningful**: 100% coverage with poor tests is worse than 80% with good tests
-5. **Versioning Strategies Matter**: CalVer is better for services, SemVer for libraries
-6. **Automation ≠ Perfection**: CI catches most issues, but not all
-
-### 12.3 Impact on Development Workflow
-
-**Before CI/CD**:
-- Manual testing before every commit
-- Forgot to run linter → bad code merged
-- Unclear which Docker images were production
-- No visibility into code coverage
-
-**After CI/CD**:
-- Tests run automatically on every push
-- Linter enforces code style (can't merge broken code)
-- Clear versioning strategy (2026.02.12 = production)
-- Coverage tracked and visible in badge
+- Testing framework functionality
+- Tests that always pass
+- Tests without assertions
+- Tests dependent on execution order
+- Tests with external dependencies
