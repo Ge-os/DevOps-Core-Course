@@ -1,0 +1,23 @@
+config:
+  # Yandex Cloud Configuration
+  # PLACEHOLDER: Replace with your actual values
+  yandex:cloudId: "b1g1234567890abcdefg"          # Your cloud ID
+  yandex:folderId: "b1g0987654321zyxwvut"         # Your folder ID
+  yandex:zone: "ru-central1-a"
+  yandex:token: ""                                 # Leave empty, will use service account key
+  
+  # Project Configuration
+  devops-lab04-pulumi:vmName: "devops-lab04-vm-pulumi"
+  devops-lab04-pulumi:vmUser: "ubuntu"
+  devops-lab04-pulumi:sshPublicKey: |             # PLACEHOLDER: Paste your SSH public key
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... your-email@example.com
+  
+  # VM Resources (Free Tier Compatible)
+  devops-lab04-pulumi:vmCores: "2"
+  devops-lab04-pulumi:vmMemory: "1"
+  devops-lab04-pulumi:vmCoreFraction: "20"
+  devops-lab04-pulumi:diskSize: "10"
+  devops-lab04-pulumi:diskType: "network-hdd"
+  
+  # Security
+  devops-lab04-pulumi:allowSshFromCidr: "0.0.0.0/0"  # WARNING: Change to your IP!
