@@ -5,12 +5,6 @@ plugin "terraform" {
   preset  = "recommended"
 }
 
-plugin "yandex" {
-  enabled = true
-  version = "0.27.0"
-  source  = "github.com/yandex-cloud/tflint-ruleset-yandex-cloud"
-}
-
 rule "terraform_naming_convention" {
   enabled = true
 }

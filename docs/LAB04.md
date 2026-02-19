@@ -70,7 +70,7 @@ terraform/
 **Terraform Version**: 1.9.0+
 
 **Required Providers**:
-- `yandex-cloud/yandex` v0.120.0+
+- `yandex-cloud/yandex` v0.130+
 - Purpose: Interact with Yandex Cloud API
 
 **Configuration**:
@@ -81,7 +81,7 @@ terraform {
   required_providers {
     yandex = {
       source  = "yandex-cloud/yandex"
-      version = "~> 0.120.0"
+      version = "~> 0.130"
     }
   }
 }
