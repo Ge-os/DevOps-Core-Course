@@ -1,0 +1,16 @@
+---
+# This file is encrypted with Ansible Vault
+# To encrypt: ansible-vault encrypt group_vars/all.yml
+# To edit: ansible-vault edit group_vars/all.yml
+# To run playbooks: ansible-playbook playbooks/deploy.yml --ask-vault-pass
+
+# Docker Hub credentials
+dockerhub_username: ge0s1
+dockerhub_password: 123456
+
+# Application configuration
+app_name: devops-app
+docker_image: "ge0s1/devops-python-app"
+docker_image_tag: latest
+app_port: 5000
+app_container_name: devops-app

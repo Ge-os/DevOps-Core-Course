@@ -1,2 +1,12 @@
 test
 .example
+
+# Ansible
+*.retry
+.vault_pass
+ansible/inventory/*.pyc
+ansible/__pycache__/
+__pycache__/
+
+# Environment secrets
+.env
