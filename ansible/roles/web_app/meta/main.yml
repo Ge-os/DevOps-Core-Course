@@ -1,0 +1,4 @@
+---
+# Docker is required to deploy the web app with Docker Compose.
+dependencies:
+  - role: docker

@@ -1,14 +1,64 @@
 ---
-- name: Update apt cache
-  apt:
-    update_cache: yes
-    cache_valid_time: 3600
+# Package baseline with grouped error handling and completion logging.
+- name: Common package management block
+  block:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
 
-- name: Install common packages
-  apt:
-    name: "{{ common_packages }}"
-    state: present
+    - name: Install common packages
+      apt:
+        name: "{{ common_packages }}"
+        state: present
 
-- name: Set system timezone
-  community.general.timezone:
-    name: "{{ common_timezone }}"
+    - name: Set system timezone
+      community.general.timezone:
+        name: "{{ common_timezone }}"
+
+  rescue:
+    - name: Repair apt metadata on cache update failure
+      command: apt-get update --fix-missing
+      changed_when: false
+
+    - name: Retry apt cache update after repair
+      apt:
+        update_cache: yes
+
+  always:
+    - name: Log completion of package block
+      copy:
+        dest: /tmp/ansible-common-packages.log
+        content: "packages block completed at {{ ansible_date_time.iso8601 }}\n"
+        mode: "0644"
+
+  become: true
+  tags:
+    - common
+    - packages
+
+# User baseline grouped separately for selective execution via --tags users.
+- name: Common user management block
+  block:
+    - name: Ensure managed users exist
+      user:
+        name: "{{ item.name }}"
+        shell: "{{ item.shell | default('/bin/bash') }}"
+        groups: "{{ (item.groups | default([])) | join(',') if (item.groups | default([])) | length > 0 else omit }}"
+        append: true
+        state: present
+      loop: "{{ common_users }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+  always:
+    - name: Log completion of user block
+      copy:
+        dest: /tmp/ansible-common-users.log
+        content: "users block completed at {{ ansible_date_time.iso8601 }}\n"
+        mode: "0644"
+
+  become: true
+  tags:
+    - common
+    - users

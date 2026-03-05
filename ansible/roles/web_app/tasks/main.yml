@@ -1,0 +1,66 @@
+# Wipe logic runs first (when explicitly requested)
+- name: Include wipe tasks
+  include_tasks: wipe.yml
+  tags:
+    - web_app_wipe
+
+- name: Deploy application with Docker Compose
+  block:
+    # Prepare dedicated compose project directory for idempotent deployments.
+    - name: Create application project directory
+      file:
+        path: "{{ compose_project_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Template Docker Compose file
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ compose_project_dir }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Log in to Docker Hub when credentials are provided
+      community.docker.docker_login:
+        username: "{{ dockerhub_username }}"
+        password: "{{ dockerhub_password }}"
+        registry_url: "{{ docker_registry_url }}"
+      no_log: true
+      when:
+        - dockerhub_username | length > 0
+        - dockerhub_password | length > 0
+
+    # Compose v2 provides declarative lifecycle (updating only what changed).
+    - name: Deploy stack with Docker Compose v2
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_project_dir }}"
+        state: present
+        pull: always
+        remove_orphans: true
+      notify: restart web app
+
+    - name: Wait for application port to be available
+      wait_for:
+        host: "127.0.0.1"
+        port: "{{ app_port }}"
+        delay: 3
+        timeout: 60
+
+    - name: Verify application health endpoint
+      uri:
+        url: "http://127.0.0.1:{{ app_port }}{{ app_health_endpoint }}"
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 5
+      until: health_check.status == 200
+
+  rescue:
+    # Keep rescue lightweight and observable for CI log analysis.
+    - name: Report deployment failure details
+      debug:
+        msg: "Docker Compose deployment failed for {{ app_name }}"
+
+  tags:
+    - app_deploy
+    - compose

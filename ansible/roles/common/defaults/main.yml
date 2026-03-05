@@ -11,3 +11,10 @@ common_packages:
   - apt-transport-https
 
 common_timezone: "UTC"
+
+# Users managed by the common role
+common_users:
+  - name: devops
+    shell: /bin/bash
+    groups:
+      - sudo

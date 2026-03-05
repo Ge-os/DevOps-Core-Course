@@ -1,0 +1,26 @@
+---
+# Application Configuration
+app_name: devops-app
+docker_image: ge0s1/devops-python-app
+docker_tag: latest
+app_port: 5000
+app_internal_port: 5000
+app_health_endpoint: /health
+
+# Docker Compose Configuration
+docker_compose_version: "3.8"
+compose_project_dir: "/opt/{{ app_name }}"
+app_restart_policy: unless-stopped
+app_env_vars:
+  PORT: "{{ app_internal_port | string }}"
+
+# Registry Authentication
+docker_registry_url: https://index.docker.io/v1/
+dockerhub_username: ""
+dockerhub_password: ""
+
+# Wipe Logic Control
+# Set to true to remove application completely
+# Wipe only:    ansible-playbook playbooks/deploy.yml -e "web_app_wipe=true" --tags web_app_wipe
+# Clean install: ansible-playbook playbooks/deploy.yml -e "web_app_wipe=true"
+web_app_wipe: false
