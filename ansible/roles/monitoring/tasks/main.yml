@@ -1,0 +1,14 @@
+---
+# Main orchestration for monitoring stack deployment
+
+- name: Include setup tasks
+  ansible.builtin.include_tasks: setup.yml
+  tags:
+    - setup
+    - monitoring
+
+- name: Include deployment tasks
+  ansible.builtin.include_tasks: deploy.yml
+  tags:
+    - deploy
+    - monitoring

@@ -1,0 +1,61 @@
+---
+# Monitoring Stack Configuration - Default Variables
+
+# Service versions
+loki_version: "3.0.0"
+promtail_version: "3.0.0"
+grafana_version: "11.3.1"
+
+# Service ports
+loki_port: 3100
+grafana_port: 3000
+promtail_port: 9080
+
+# Loki configuration
+loki_retention_period: "168h"  # 7 days
+loki_schema_version: "v13"
+loki_compaction_interval: "10m"
+loki_retention_delete_delay: "2h"
+
+# Resource limits
+loki_memory_limit: "1G"
+loki_cpu_limit: "1.0"
+loki_memory_reservation: "512M"
+loki_cpu_reservation: "0.5"
+
+grafana_memory_limit: "1G"
+grafana_cpu_limit: "1.0"
+grafana_memory_reservation: "512M"
+grafana_cpu_reservation: "0.5"
+
+promtail_memory_limit: "512M"
+promtail_cpu_limit: "0.5"
+promtail_memory_reservation: "256M"
+promtail_cpu_reservation: "0.25"
+
+# Grafana configuration
+grafana_admin_user: "admin"
+grafana_admin_password: "{{ vault_grafana_password | default('changeme_secure_password') }}"
+grafana_anonymous_enabled: false  # Secure by default
+grafana_log_level: "info"
+
+# Deployment paths
+monitoring_dir: "/opt/monitoring"
+monitoring_config_dir: "{{ monitoring_dir }}/config"
+
+# Application configuration
+python_app_enabled: true
+python_app_port: 8000
+python_app_internal_port: 5000
+python_app_log_level: "INFO"
+python_app_context: "../app_python"
+
+# Docker configuration
+docker_network_name: "logging-network"
+docker_compose_project_name: "monitoring"
+
+# Health check configuration
+health_check_interval: "10s"
+health_check_timeout: "5s"
+health_check_retries: 5
+health_check_start_period: "10s"

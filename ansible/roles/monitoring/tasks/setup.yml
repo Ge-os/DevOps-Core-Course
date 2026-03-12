@@ -1,0 +1,91 @@
+---
+# Setup tasks: directories and configuration files
+
+- name: Create monitoring directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+  loop:
+    - "{{ monitoring_dir }}"
+    - "{{ monitoring_dir }}/loki"
+    - "{{ monitoring_dir }}/promtail"
+    - "{{ monitoring_dir }}/grafana"
+    - "{{ monitoring_dir }}/grafana/provisioning"
+    - "{{ monitoring_dir }}/grafana/provisioning/datasources"
+    - "{{ monitoring_dir }}/docs"
+  tags:
+    - setup
+    - directories
+
+- name: Template Loki configuration
+  ansible.builtin.template:
+    src: loki-config.yml.j2
+    dest: "{{ monitoring_dir }}/loki/config.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template Promtail configuration
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: "{{ monitoring_dir }}/promtail/config.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template Grafana Loki datasource
+  ansible.builtin.copy:
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://loki:{{ loki_port }}
+          isDefault: true
+          jsonData:
+            maxLines: 1000
+          editable: true
+    dest: "{{ monitoring_dir }}/grafana/provisioning/datasources/loki.yml"
+    mode: '0644'
+  tags:
+    - setup
+    - config
+
+- name: Template Docker Compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ monitoring_dir }}/docker-compose.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ monitoring_dir }}/.env"
+    mode: '0600'
+  no_log: true
+  tags:
+    - setup
+    - config
+    - secrets
+
+- name: Display setup completion message
+  ansible.builtin.debug:
+    msg: |
+      Configuration files created successfully in {{ monitoring_dir }}
+      - Loki config: {{ monitoring_dir }}/loki/config.yml
+      - Promtail config: {{ monitoring_dir }}/promtail/config.yml
+      - Docker Compose: {{ monitoring_dir }}/docker-compose.yml
+  tags:
+    - setup
