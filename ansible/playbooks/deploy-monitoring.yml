@@ -1,8 +1,8 @@
 ---
 # Deploy Loki Monitoring Stack
-# This playbook deploys the complete logging stack with Loki, Promtail, and Grafana
+# This playbook deploys the complete observability stack with Prometheus, Loki, Promtail, and Grafana
 
-- name: Deploy Loki Monitoring Stack
+- name: Deploy Observability Monitoring Stack
   hosts: all
   become: true
   
@@ -38,6 +38,7 @@
           
           Services:
           - Grafana: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ grafana_port }}
+          - Prometheus: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ prometheus_port }}
           - Loki API: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ loki_port }}
           - Promtail: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ promtail_port }}
           {% if python_app_enabled %}
@@ -49,16 +50,18 @@
           - Password: (check {{ monitoring_dir }}/.env on target host)
           
           Configuration:
+          - Prometheus Version: {{ prometheus_version }}
+          - Prometheus Retention: {{ prometheus_retention_days }}d / {{ prometheus_retention_size }}
           - Log Retention: {{ loki_retention_period }}
           - Loki Version: {{ loki_version }}
           - Grafana Version: {{ grafana_version }}
           
           Next Steps:
-          1. Access Grafana web UI
-          2. Verify Loki datasource is configured
-          3. Navigate to Explore and run: {job="docker"}
-          4. Create dashboards based on Lab 7 requirements
-          5. Take screenshots for documentation
+          1. Open Prometheus targets page and verify all jobs are UP
+          2. Access Grafana web UI and verify Loki + Prometheus datasources
+          3. Open pre-provisioned logs and metrics dashboards
+          4. Generate app traffic and validate live metrics/log streams
+          5. Take screenshots for Lab 8 documentation
           
           Useful Commands:
           - View logs: docker compose -f {{ monitoring_dir }}/docker-compose.yml logs -f

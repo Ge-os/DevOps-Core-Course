@@ -7,11 +7,13 @@ import sys
 import socket
 import platform
 import logging
-import json
+from time import perf_counter
 from datetime import datetime, timezone
 from typing import Dict, Any
 
 from fastapi import FastAPI, Request
+from fastapi.responses import Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from pythonjsonlogger import jsonlogger
 
 # Configure JSON logging
@@ -38,6 +40,35 @@ logger.addHandler(json_handler)
 # Application startup time
 start_time = datetime.now(timezone.utc)
 
+# Prometheus metrics (RED method + app-specific metrics)
+http_requests_total = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "endpoint", "status_code"],
+)
+
+http_request_duration_seconds = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "endpoint"],
+)
+
+http_requests_in_progress = Gauge(
+    "http_requests_in_progress",
+    "HTTP requests currently being processed",
+)
+
+devops_info_endpoint_calls_total = Counter(
+    "devops_info_endpoint_calls_total",
+    "Endpoint calls for DevOps info service",
+    ["endpoint"],
+)
+
+devops_info_system_collection_seconds = Histogram(
+    "devops_info_system_collection_seconds",
+    "Time spent collecting system information",
+)
+
 # Configuration from environment variables
 HOST = os.getenv('HOST', '0.0.0.0')
 PORT = int(os.getenv('PORT', 5000))
@@ -62,6 +93,8 @@ logger.info("Application starting", extra={
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log all HTTP requests and responses"""
+    request_start = perf_counter()
+
     # Log incoming request
     logger.info("HTTP Request", extra={
         "method": request.method,
@@ -69,18 +102,39 @@ async def log_requests(request: Request, call_next):
         "client_ip": request.client.host if request.client else "unknown",
         "user_agent": request.headers.get('user-agent', 'unknown')
     })
-    
-    # Process request
-    response = await call_next(request)
-    
-    # Log response
-    logger.info("HTTP Response", extra={
-        "method": request.method,
-        "path": request.url.path,
-        "status_code": response.status_code
-    })
-    
-    return response
+
+    http_requests_in_progress.inc()
+    response = None
+    try:
+        # Process request
+        response = await call_next(request)
+        return response
+    finally:
+        endpoint = request.url.path
+        route = request.scope.get("route")
+        if route and hasattr(route, "path"):
+            endpoint = route.path
+
+        status_code = response.status_code if response else 500
+        duration = perf_counter() - request_start
+
+        http_requests_total.labels(
+            method=request.method,
+            endpoint=endpoint,
+            status_code=str(status_code),
+        ).inc()
+        http_request_duration_seconds.labels(
+            method=request.method,
+            endpoint=endpoint,
+        ).observe(duration)
+        http_requests_in_progress.dec()
+
+        logger.info("HTTP Response", extra={
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": status_code,
+            "duration_seconds": round(duration, 6),
+        })
 
 
 def get_uptime() -> Dict[str, Any]:
@@ -115,8 +169,13 @@ async def root(request: Request) -> Dict[str, Any]:
     Returns:
         Dict containing service, system, runtime, request info and available endpoints
     """
-    uptime = get_uptime()
+    devops_info_endpoint_calls_total.labels(endpoint="/").inc()
+
+    system_info_start = perf_counter()
     system_info = get_system_info()
+    devops_info_system_collection_seconds.observe(perf_counter() - system_info_start)
+
+    uptime = get_uptime()
     
     return {
         "service": {
@@ -148,6 +207,11 @@ async def root(request: Request) -> Dict[str, Any]:
                 "path": "/health",
                 "method": "GET",
                 "description": "Health check"
+            },
+            {
+                "path": "/metrics",
+                "method": "GET",
+                "description": "Prometheus metrics"
             }
         ]
     }
@@ -161,6 +225,8 @@ async def health() -> Dict[str, Any]:
     Returns:
         Dict containing health status, timestamp and uptime
     """
+    devops_info_endpoint_calls_total.labels(endpoint="/health").inc()
+
     uptime = get_uptime()
     
     return {
@@ -168,6 +234,13 @@ async def health() -> Dict[str, Any]:
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "uptime_seconds": uptime['seconds']
     }
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    """Prometheus metrics endpoint."""
+    devops_info_endpoint_calls_total.labels(endpoint="/metrics").inc()
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # Startup event

@@ -4,18 +4,38 @@
 # Service versions
 loki_version: "3.0.0"
 promtail_version: "3.0.0"
-grafana_version: "11.3.1"
+grafana_version: "12.3.0"
+prometheus_version: "3.9.0"
 
 # Service ports
 loki_port: 3100
 grafana_port: 3000
 promtail_port: 9080
+prometheus_port: 9090
 
 # Loki configuration
 loki_retention_period: "168h"  # 7 days
 loki_schema_version: "v13"
 loki_compaction_interval: "10m"
 loki_retention_delete_delay: "2h"
+
+# Prometheus configuration
+prometheus_retention_days: 15
+prometheus_retention_size: "10GB"
+prometheus_scrape_interval: "15s"
+
+prometheus_targets:
+  - job: "prometheus"
+    targets: ["localhost:9090"]
+  - job: "loki"
+    targets: ["loki:3100"]
+    path: "/metrics"
+  - job: "grafana"
+    targets: ["grafana:3000"]
+    path: "/metrics"
+  - job: "app"
+    targets: ["app-python:5000"]
+    path: "/metrics"
 
 # Resource limits
 loki_memory_limit: "1G"
@@ -25,8 +45,13 @@ loki_cpu_reservation: "0.5"
 
 grafana_memory_limit: "1G"
 grafana_cpu_limit: "1.0"
-grafana_memory_reservation: "512M"
-grafana_cpu_reservation: "0.5"
+grafana_memory_reservation: "256M"
+grafana_cpu_reservation: "0.25"
+
+prometheus_memory_limit: "1G"
+prometheus_cpu_limit: "1.0"
+prometheus_memory_reservation: "512M"
+prometheus_cpu_reservation: "0.5"
 
 promtail_memory_limit: "512M"
 promtail_cpu_limit: "0.5"
@@ -49,6 +74,10 @@ python_app_port: 8000
 python_app_internal_port: 5000
 python_app_log_level: "INFO"
 python_app_context: "../app_python"
+python_app_memory_limit: "256M"
+python_app_cpu_limit: "0.5"
+python_app_memory_reservation: "128M"
+python_app_cpu_reservation: "0.25"
 
 # Docker configuration
 docker_network_name: "logging-network"

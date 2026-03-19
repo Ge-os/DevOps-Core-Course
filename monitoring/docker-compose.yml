@@ -1,6 +1,37 @@
 version: '3.8'
 
 services:
+  # Prometheus - Metrics collection and TSDB storage
+  prometheus:
+    image: prom/prometheus:v3.9.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+      - '--storage.tsdb.retention.size=10GB'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   # Loki - Log aggregation system
   loki:
     image: grafana/loki:3.0.0
@@ -62,7 +93,7 @@ services:
 
   # Grafana - Visualization and dashboards
   grafana:
-    image: grafana/grafana:11.3.1
+    image: grafana/grafana:12.3.0
     container_name: grafana
     ports:
       - "3000:3000"
@@ -80,19 +111,22 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - logging
     depends_on:
       loki:
         condition: service_healthy
+      prometheus:
+        condition: service_healthy
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
           cpus: '0.5'
           memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
       interval: 10s
@@ -122,10 +156,10 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 512M
+          memory: 256M
         reservations:
           cpus: '0.25'
-          memory: 256M
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1"]
       interval: 10s
@@ -136,6 +170,8 @@ services:
     depends_on:
       promtail:
         condition: service_healthy
+      prometheus:
+        condition: service_healthy
 
 networks:
   logging:
@@ -143,6 +179,8 @@ networks:
     name: logging-network
 
 volumes:
+  prometheus-data:
+    name: prometheus-data
   loki-data:
     name: loki-data
   promtail-data:

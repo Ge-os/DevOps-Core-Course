@@ -1,8 +1,8 @@
-# Lab 7 - Monitoring Stack Testing Script (PowerShell)
-# This script tests all components of the Loki monitoring stack
+# Lab 8 - Monitoring Stack Testing Script (PowerShell)
+# This script tests observability components: Prometheus, Loki, Promtail, Grafana, and app metrics
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "Lab 7 - Loki Stack Verification" -ForegroundColor Cyan
+Write-Host "Lab 8 - Observability Stack Verification" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -42,11 +42,14 @@ Write-Host "---------------------------------------"
 $endpoints = @(
     @{Url="http://localhost:3100/ready"; Status=200; Name="Loki /ready"}
     @{Url="http://localhost:3100/metrics"; Status=200; Name="Loki /metrics"}
+    @{Url="http://localhost:9090/-/healthy"; Status=200; Name="Prometheus /-/healthy"}
+    @{Url="http://localhost:9090/targets"; Status=200; Name="Prometheus /targets"}
     @{Url="http://localhost:9080/ready"; Status=200; Name="Promtail /ready"}
     @{Url="http://localhost:9080/targets"; Status=200; Name="Promtail /targets"}
     @{Url="http://localhost:3000/api/health"; Status=200; Name="Grafana /api/health"}
     @{Url="http://localhost:8000/"; Status=200; Name="Python App /"}
     @{Url="http://localhost:8000/health"; Status=200; Name="Python App /health"}
+    @{Url="http://localhost:8000/metrics"; Status=200; Name="Python App /metrics"}
 )
 
 foreach ($endpoint in $endpoints) {
@@ -164,7 +167,22 @@ try {
 }
 
 Write-Host ""
-Write-Host "8. Checking resource usage..." -ForegroundColor Yellow
+Write-Host "8. Checking Prometheus targets..." -ForegroundColor Yellow
+Write-Host "---------------------------------------"
+try {
+    $upQuery = Invoke-RestMethod -Uri "http://localhost:9090/api/v1/query?query=up" -UseBasicParsing
+    $upCount = $upQuery.data.result.Count
+    if ($upCount -gt 0) {
+        Write-Host "✓ Prometheus up query returned $upCount target series" -ForegroundColor Green
+    } else {
+        Write-Host "✗ Prometheus up query returned no data" -ForegroundColor Red
+    }
+} catch {
+    Write-Host "✗ Failed to query Prometheus" -ForegroundColor Red
+}
+
+Write-Host ""
+Write-Host "9. Checking resource usage..." -ForegroundColor Yellow
 Write-Host "---------------------------------------"
 docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
 
@@ -176,11 +194,10 @@ Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Green
 Write-Host "1. Access Grafana: http://localhost:3000"
 Write-Host "   - Login: admin / (your password from .env)"
-Write-Host "2. Go to Explore and run queries:"
-Write-Host "   - {job=`"docker`"}"
-Write-Host "   - {app=`"devops-python`"} | json"
-Write-Host "3. Create dashboard with panels (see LAB07.md section 4.2)"
-Write-Host "4. Take screenshots for documentation"
+Write-Host "2. Access Prometheus: http://localhost:9090/targets"
+Write-Host "3. In Grafana Explore run Loki query: {job=`"docker`"}"
+Write-Host "4. In Grafana Explore run PromQL query: sum(rate(http_requests_total[5m]))"
+Write-Host "5. Take screenshots for documentation"
 Write-Host ""
 Write-Host "Useful commands:"
 Write-Host "  - View logs: docker compose logs -f [service]"

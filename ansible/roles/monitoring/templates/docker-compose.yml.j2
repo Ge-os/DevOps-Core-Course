@@ -5,6 +5,37 @@
 version: '3.8'
 
 services:
+  # Prometheus - Metrics collection and TSDB storage
+  prometheus:
+    image: prom/prometheus:v{{ prometheus_version }}
+    container_name: prometheus
+    ports:
+      - "{{ prometheus_port }}:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time={{ prometheus_retention_days }}d'
+      - '--storage.tsdb.retention.size={{ prometheus_retention_size }}'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - logging
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ prometheus_cpu_limit }}'
+          memory: {{ prometheus_memory_limit }}
+        reservations:
+          cpus: '{{ prometheus_cpu_reservation }}'
+          memory: {{ prometheus_memory_reservation }}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: {{ health_check_interval }}
+      timeout: {{ health_check_timeout }}
+      retries: {{ health_check_retries }}
+      start_period: {{ health_check_start_period }}
+    restart: unless-stopped
+
   # Loki - Log aggregation system
   loki:
     image: grafana/loki:{{ loki_version }}
@@ -88,10 +119,13 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - logging
     depends_on:
       loki:
+        condition: service_healthy
+      prometheus:
         condition: service_healthy
     deploy:
       resources:
@@ -130,11 +164,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '{{ python_app_cpu_limit }}'
+          memory: {{ python_app_memory_limit }}
         reservations:
-          cpus: '0.25'
-          memory: 256M
+          cpus: '{{ python_app_cpu_reservation }}'
+          memory: {{ python_app_memory_reservation }}
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:{{ python_app_internal_port }}/health || exit 1"]
       interval: {{ health_check_interval }}
@@ -145,6 +179,8 @@ services:
     depends_on:
       promtail:
         condition: service_healthy
+      prometheus:
+        condition: service_healthy
 {% endif %}
 
 networks:
@@ -153,6 +189,8 @@ networks:
     name: {{ docker_network_name }}
 
 volumes:
+  prometheus-data:
+    name: prometheus-data
   loki-data:
     name: loki-data
   promtail-data:

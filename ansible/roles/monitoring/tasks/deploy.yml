@@ -57,6 +57,19 @@
     - deploy
     - verify
 
+- name: Wait for Prometheus to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ prometheus_port }}/-/healthy"
+    method: GET
+    status_code: 200
+  retries: 30
+  delay: 2
+  register: prometheus_ready
+  until: prometheus_ready.status == 200
+  tags:
+    - deploy
+    - verify
+
 - name: Wait for Promtail to be ready
   ansible.builtin.uri:
     url: "http://localhost:{{ promtail_port }}/ready"
@@ -100,6 +113,23 @@
     - deploy
     - verify
 
+- name: Verify Prometheus datasource in Grafana
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_port }}/api/datasources/name/Prometheus"
+    method: GET
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    status_code: 200
+  retries: 10
+  delay: 2
+  register: prometheus_datasource_verify
+  until: prometheus_datasource_verify.status == 200
+  ignore_errors: yes
+  tags:
+    - deploy
+    - verify
+
 - name: Get Promtail targets
   ansible.builtin.uri:
     url: "http://localhost:{{ promtail_port }}/targets"
@@ -119,6 +149,7 @@
       
       Access URLs:
       - Grafana: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ grafana_port }}
+      - Prometheus: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ prometheus_port }}
       - Loki: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ loki_port }}
       - Promtail: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ promtail_port }}
       {% if python_app_enabled %}
@@ -130,6 +161,7 @@
       - Password: (stored in {{ monitoring_dir }}/.env)
       
       Services Status:
+      - Prometheus: {{ 'Ready' if prometheus_ready.status == 200 else 'Not Ready' }}
       - Loki: {{ 'Ready' if loki_ready.status == 200 else 'Not Ready' }}
       - Promtail: {{ 'Ready' if promtail_ready.status == 200 else 'Not Ready' }}
       - Grafana: {{ 'Ready' if grafana_ready.status == 200 else 'Not Ready' }}
@@ -155,17 +187,21 @@
       Host: {{ ansible_hostname }}
       
       Service Versions:
+      - Prometheus: {{ prometheus_version }}
       - Loki: {{ loki_version }}
       - Promtail: {{ promtail_version }}
       - Grafana: {{ grafana_version }}
       
       Access URLs:
+      - Prometheus: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ prometheus_port }}
       - Grafana: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ grafana_port }}
       - Loki: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ loki_port }}
       - Promtail: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ promtail_port }}
       
       Configuration:
+      - Prometheus retention: {{ prometheus_retention_days }} days, {{ prometheus_retention_size }}
       - Retention Period: {{ loki_retention_period }}
+      - Prometheus Port: {{ prometheus_port }}
       - Loki Port: {{ loki_port }}
       - Grafana Port: {{ grafana_port }}
       - Promtail Port: {{ promtail_port }}

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Lab 7 - Monitoring Stack Testing Script
-# This script tests all components of the Loki monitoring stack
+# Lab 8 - Monitoring Stack Testing Script
+# This script tests observability components: Prometheus, Loki, Promtail, Grafana, and app metrics
 
 set -e  # Exit on error
 
 echo "========================================="
-echo "Lab 7 - Loki Stack Verification"
+echo "Lab 8 - Observability Stack Verification"
 echo "========================================="
 echo ""
 
@@ -67,6 +67,10 @@ echo "---------------------------------------"
 test_endpoint "http://localhost:3100/ready" "200" "Loki /ready"
 test_endpoint "http://localhost:3100/metrics" "200" "Loki /metrics"
 
+# Test Prometheus
+test_endpoint "http://localhost:9090/-/healthy" "200" "Prometheus /-/healthy"
+test_endpoint "http://localhost:9090/targets" "200" "Prometheus /targets"
+
 # Test Promtail
 test_endpoint "http://localhost:9080/ready" "200" "Promtail /ready"
 test_endpoint "http://localhost:9080/targets" "200" "Promtail /targets"
@@ -77,6 +81,7 @@ test_endpoint "http://localhost:3000/api/health" "200" "Grafana /api/health"
 # Test Python App
 test_endpoint "http://localhost:8000/" "200" "Python App /"
 test_endpoint "http://localhost:8000/health" "200" "Python App /health"
+test_endpoint "http://localhost:8000/metrics" "200" "Python App /metrics"
 
 echo ""
 echo "3. Checking Promtail targets..."
@@ -167,9 +172,21 @@ else
 fi
 
 echo ""
-echo "8. Checking resource usage..."
+echo "8. Checking Prometheus targets..."
 echo "---------------------------------------"
-docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" | grep -E "loki|promtail|grafana|devops-python"
+up_targets=$(curl -s http://localhost:9090/api/v1/query --data-urlencode 'query=up' 2>/dev/null | jq -r '.data.result | length' 2>/dev/null || echo "0")
+echo "Targets visible in Prometheus up query: $up_targets"
+
+if [ "$up_targets" -gt 0 ]; then
+    echo -e "${GREEN}✓${NC} Prometheus can query targets"
+else
+    echo -e "${RED}✗${NC} Prometheus target query returned no data"
+fi
+
+echo ""
+echo "9. Checking resource usage..."
+echo "---------------------------------------"
+docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" | grep -E "prometheus|loki|promtail|grafana|devops-python"
 
 echo ""
 echo "========================================="
@@ -179,11 +196,10 @@ echo ""
 echo "Next Steps:"
 echo "1. Access Grafana: http://localhost:3000"
 echo "   - Login: admin / (your password from .env)"
-echo "2. Go to Explore and run queries:"
-echo "   - {job=\"docker\"}"
-echo "   - {app=\"devops-python\"} | json"
-echo "3. Create dashboard with panels (see LAB07.md section 4.2)"
-echo "4. Take screenshots for documentation"
+echo "2. Access Prometheus: http://localhost:9090/targets"
+echo "3. In Grafana Explore run Loki query: {job=\"docker\"}"
+echo "4. In Grafana Explore run PromQL query: sum(rate(http_requests_total[5m]))"
+echo "5. Take screenshots for documentation"
 echo ""
 echo "Useful commands:"
 echo "  - View logs: docker compose logs -f [service]"

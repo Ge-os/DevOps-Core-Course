@@ -7,7 +7,7 @@ dependencies:
 
 galaxy_info:
   author: Selivanov George
-  description: Ansible role for deploying Grafana Loki monitoring stack
+  description: Ansible role for deploying Prometheus + Loki + Grafana monitoring stack
   company: Innopolis University
   license: MIT
   min_ansible_version: "2.16"
@@ -24,6 +24,7 @@ galaxy_info:
   
   galaxy_tags:
     - loki
+    - prometheus
     - grafana
     - promtail
     - monitoring

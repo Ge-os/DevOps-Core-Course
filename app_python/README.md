@@ -67,6 +67,7 @@ DEBUG=true python app.py
 Once running, access the service at:
 - **Main endpoint**: http://localhost:5000/
 - **Health check**: http://localhost:5000/health
+- **Prometheus metrics**: http://localhost:5000/metrics
 - **Interactive API docs**: http://localhost:5000/docs
 
 ## Docker
@@ -162,6 +163,16 @@ Simple health check endpoint for monitoring systems and Kubernetes probes.
 ```
 
 **Status Code:** 200 OK (when healthy)
+
+### GET `/metrics`
+
+Exposes Prometheus-compatible metrics for monitoring.
+
+**Includes:**
+- RED metrics for HTTP traffic (`http_requests_total`, `http_request_duration_seconds`, `http_requests_in_progress`)
+- Application business metrics (`devops_info_endpoint_calls_total`, `devops_info_system_collection_seconds`)
+
+**Status Code:** 200 OK
 
 ## Configuration
 

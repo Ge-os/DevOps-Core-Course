@@ -1,6 +1,6 @@
 # Monitoring Ansible Role
 
-This Ansible role deploys the Grafana Loki monitoring stack including Loki 3.0, Promtail 3.0, and Grafana 11.3.1.
+This Ansible role deploys the full observability stack including Prometheus 3.9, Loki 3.0, Promtail 3.0, and Grafana 12.3 with pre-provisioned datasources and dashboards.
 
 ## Requirements
 
@@ -18,15 +18,22 @@ See `defaults/main.yml` for all available variables. Key variables:
 # Service versions
 loki_version: "3.0.0"
 promtail_version: "3.0.0"
-grafana_version: "11.3.1"
+grafana_version: "12.3.0"
+prometheus_version: "3.9.0"
 
 # Service ports
+prometheus_port: 9090
 loki_port: 3100
 grafana_port: 3000
 promtail_port: 9080
 
 # Loki configuration
 loki_retention_period: "168h"  # 7 days
+
+# Prometheus configuration
+prometheus_retention_days: 15
+prometheus_retention_size: "10GB"
+prometheus_scrape_interval: "15s"
 
 # Grafana security
 grafana_admin_user: "admin"
@@ -96,7 +103,8 @@ ansible-playbook -i inventory/hosts.ini playbooks/deploy-monitoring.yml --limit 
 - **Idempotent**: Safe to run multiple times
 - **Templated Configs**: Easy to customize via variables
 - **Health Checks**: Automatic service health verification
-- **Grafana Provisioning**: Auto-configured Loki datasource
+- **Grafana Provisioning**: Auto-configured Loki + Prometheus datasources
+- **Dashboard Provisioning**: Auto-imported logs + metrics dashboards
 - **Security**: Secrets managed via Ansible Vault
 - **Resource Limits**: Configurable resource constraints
 - **Multi-Environment**: Support for dev/staging/prod
@@ -105,10 +113,11 @@ ansible-playbook -i inventory/hosts.ini playbooks/deploy-monitoring.yml --limit 
 
 The role deploys:
 
-1. **Loki**: Log aggregation with TSDB storage
-2. **Promtail**: Docker log collector with service discovery
-3. **Grafana**: Visualization with pre-configured Loki datasource
-4. **Python App** (optional): Application with JSON logging
+1. **Prometheus**: Metrics collection and TSDB storage
+2. **Loki**: Log aggregation with TSDB storage
+3. **Promtail**: Docker log collector with service discovery
+4. **Grafana**: Visualization with pre-configured Loki + Prometheus datasources
+5. **Python App** (optional): Application with JSON logging and `/metrics`
 
 All services run in Docker containers managed by Docker Compose.
 
@@ -125,7 +134,11 @@ monitoring/
 │   ├── docker-compose.yml.j2  # Docker Compose template
 │   ├── loki-config.yml.j2     # Loki configuration
 │   ├── promtail-config.yml.j2 # Promtail configuration
+│   ├── prometheus.yml.j2      # Prometheus scrape configuration
 │   └── env.j2                 # Environment variables
+├── files/
+│   ├── grafana-app-dashboard.json
+│   └── grafana-logs-dashboard.json
 ├── handlers/main.yml      # Service restart handlers
 └── meta/main.yml          # Role metadata
 ```
@@ -135,6 +148,7 @@ monitoring/
 After deployment, the stack is available at:
 
 - **Grafana**: http://localhost:3000
+- **Prometheus**: http://localhost:9090
 - **Loki API**: http://localhost:3100
 - **Promtail**: http://localhost:9080
 
