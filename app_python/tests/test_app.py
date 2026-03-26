@@ -5,8 +5,6 @@ Tests all endpoints with comprehensive coverage.
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime
-import platform
-import socket
 
 from app import app
 
@@ -272,6 +270,43 @@ class TestErrorHandling:
         """Test that POST to health endpoint returns 405."""
         response = client.post("/health")
         assert response.status_code == 405
+
+
+class TestMetricsEndpoint:
+    """Tests for the /metrics endpoint and metric exposition."""
+
+    def test_metrics_status_code(self, client):
+        """Test that metrics endpoint returns 200 OK."""
+        response = client.get("/metrics")
+        assert response.status_code == 200
+
+    def test_metrics_content_type(self, client):
+        """Test that metrics endpoint returns Prometheus text format."""
+        response = client.get("/metrics")
+        assert response.headers["content-type"].startswith("text/plain")
+
+    def test_metrics_contains_required_metric_names(self, client):
+        """Test that required RED metrics are exposed."""
+        # Generate traffic first so series are present.
+        client.get("/")
+        client.get("/health")
+
+        response = client.get("/metrics")
+        metrics_text = response.text
+
+        assert "http_requests_total" in metrics_text
+        assert "http_request_duration_seconds" in metrics_text
+        assert "http_requests_in_progress" in metrics_text
+        assert "devops_info_endpoint_calls_total" in metrics_text
+
+    def test_metrics_contains_required_labels(self, client):
+        """Test that request metrics use method/endpoint/status_code labels."""
+        client.get("/")
+        response = client.get("/metrics")
+
+        assert 'method="GET"' in response.text
+        assert 'endpoint="/"' in response.text
+        assert 'status_code="200"' in response.text
 
 
 class TestResponseConsistency:

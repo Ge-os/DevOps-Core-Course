@@ -1,0 +1,34 @@
+---
+# Monitoring role metadata
+
+dependencies:
+  - role: docker
+    when: docker_install | default(true)
+
+galaxy_info:
+  author: Selivanov George
+  description: Ansible role for deploying Prometheus + Loki + Grafana monitoring stack
+  company: Innopolis University
+  license: MIT
+  min_ansible_version: "2.16"
+  
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+  
+  galaxy_tags:
+    - loki
+    - prometheus
+    - grafana
+    - promtail
+    - monitoring
+    - logging
+    - observability
+    - docker
+    - containers

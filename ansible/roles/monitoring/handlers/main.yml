@@ -1,0 +1,8 @@
+---
+# Restart monitoring stack handler
+
+- name: Restart monitoring stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_dir }}"
+    state: restarted
+  when: monitoring_dir is defined

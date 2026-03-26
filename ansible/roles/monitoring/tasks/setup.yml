@@ -1,0 +1,120 @@
+---
+# Setup tasks: directories and configuration files
+
+- name: Create monitoring directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+  loop:
+    - "{{ monitoring_dir }}"
+    - "{{ monitoring_dir }}/prometheus"
+    - "{{ monitoring_dir }}/loki"
+    - "{{ monitoring_dir }}/promtail"
+    - "{{ monitoring_dir }}/grafana"
+    - "{{ monitoring_dir }}/grafana/dashboards"
+    - "{{ monitoring_dir }}/grafana/provisioning"
+    - "{{ monitoring_dir }}/grafana/provisioning/datasources"
+    - "{{ monitoring_dir }}/grafana/provisioning/dashboards"
+    - "{{ monitoring_dir }}/docs"
+  tags:
+    - setup
+    - directories
+
+- name: Template Loki configuration
+  ansible.builtin.template:
+    src: loki-config.yml.j2
+    dest: "{{ monitoring_dir }}/loki/config.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template Promtail configuration
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: "{{ monitoring_dir }}/promtail/config.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template Prometheus configuration
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_dir }}/prometheus/prometheus.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template Grafana datasources
+  ansible.builtin.template:
+    src: grafana/datasources.yml.j2
+    dest: "{{ monitoring_dir }}/grafana/provisioning/datasources/datasources.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template Grafana dashboard provider
+  ansible.builtin.template:
+    src: grafana/dashboards.yml.j2
+    dest: "{{ monitoring_dir }}/grafana/provisioning/dashboards/dashboards.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Copy Grafana dashboards
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ monitoring_dir }}/grafana/dashboards/{{ item }}"
+    mode: '0644'
+  loop:
+    - grafana-app-dashboard.json
+    - grafana-logs-dashboard.json
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+    - dashboards
+
+- name: Template Docker Compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ monitoring_dir }}/docker-compose.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+  tags:
+    - setup
+    - config
+
+- name: Template environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ monitoring_dir }}/.env"
+    mode: '0600'
+  no_log: true
+  tags:
+    - setup
+    - config
+    - secrets
+
+- name: Display setup completion message
+  ansible.builtin.debug:
+    msg: |
+      Configuration files created successfully in {{ monitoring_dir }}
+      - Loki config: {{ monitoring_dir }}/loki/config.yml
+      - Promtail config: {{ monitoring_dir }}/promtail/config.yml
+      - Prometheus config: {{ monitoring_dir }}/prometheus/prometheus.yml
+      - Docker Compose: {{ monitoring_dir }}/docker-compose.yml
+  tags:
+    - setup

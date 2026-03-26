@@ -1,0 +1,28 @@
+---
+# This file should be encrypted with Ansible Vault in real environments.
+# To encrypt: ansible-vault encrypt group_vars/all.yml
+# To edit: ansible-vault edit group_vars/all.yml
+# To run playbooks: ansible-playbook playbooks/deploy.yml --ask-vault-pass
+
+# Docker Hub credentials
+dockerhub_username: ge0s1
+dockerhub_password: "__CHANGE_ME_DOCKERHUB_TOKEN__"
+
+# Application configuration
+app_name: devops-app
+docker_image: "ge0s1/devops-python-app"
+docker_tag: latest
+app_port: 5000
+app_internal_port: 5000
+app_health_endpoint: /health
+
+# Docker Compose config
+docker_compose_version: "3.8"
+compose_project_dir: "/opt/{{ app_name }}"
+
+# Optional application environment variables
+app_env_vars:
+  PORT: "{{ app_internal_port | string }}"
+
+# Wipe safety variable (must also use --tags web_app_wipe)
+web_app_wipe: false

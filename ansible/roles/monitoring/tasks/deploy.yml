@@ -1,0 +1,216 @@
+---
+# Deployment tasks: Docker Compose deployment and verification
+
+- name: Check if Docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+  tags:
+    - deploy
+    - check
+
+- name: Fail if Docker is not installed
+  ansible.builtin.fail:
+    msg: "Docker is not installed. Please run the docker role first."
+  when: docker_check.rc != 0
+  tags:
+    - deploy
+    - check
+
+- name: Check if Docker Compose v2 is installed
+  ansible.builtin.command: docker compose version
+  register: compose_check
+  changed_when: false
+  failed_when: false
+  tags:
+    - deploy
+    - check
+
+- name: Fail if Docker Compose v2 is not installed
+  ansible.builtin.fail:
+    msg: "Docker Compose v2 is not installed. Please ensure 'docker compose' command is available."
+  when: compose_check.rc != 0
+  tags:
+    - deploy
+    - check
+
+- name: Deploy monitoring stack with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_dir }}"
+    state: present
+    pull: "always"
+  register: compose_result
+  tags:
+    - deploy
+
+- name: Wait for Loki to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ loki_port }}/ready"
+    method: GET
+    status_code: 200
+  retries: 30
+  delay: 2
+  register: loki_ready
+  until: loki_ready.status == 200
+  tags:
+    - deploy
+    - verify
+
+- name: Wait for Prometheus to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ prometheus_port }}/-/healthy"
+    method: GET
+    status_code: 200
+  retries: 30
+  delay: 2
+  register: prometheus_ready
+  until: prometheus_ready.status == 200
+  tags:
+    - deploy
+    - verify
+
+- name: Wait for Promtail to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ promtail_port }}/ready"
+    method: GET
+    status_code: 200
+  retries: 20
+  delay: 2
+  register: promtail_ready
+  until: promtail_ready.status == 200
+  tags:
+    - deploy
+    - verify
+
+- name: Wait for Grafana to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_port }}/api/health"
+    method: GET
+    status_code: 200
+  retries: 30
+  delay: 2
+  register: grafana_ready
+  until: grafana_ready.status == 200
+  tags:
+    - deploy
+    - verify
+
+- name: Verify Loki datasource in Grafana
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_port }}/api/datasources/name/Loki"
+    method: GET
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    status_code: 200
+  retries: 10
+  delay: 2
+  register: datasource_verify
+  until: datasource_verify.status == 200
+  ignore_errors: yes
+  tags:
+    - deploy
+    - verify
+
+- name: Verify Prometheus datasource in Grafana
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_port }}/api/datasources/name/Prometheus"
+    method: GET
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    status_code: 200
+  retries: 10
+  delay: 2
+  register: prometheus_datasource_verify
+  until: prometheus_datasource_verify.status == 200
+  ignore_errors: yes
+  tags:
+    - deploy
+    - verify
+
+- name: Get Promtail targets
+  ansible.builtin.uri:
+    url: "http://localhost:{{ promtail_port }}/targets"
+    method: GET
+    return_content: yes
+  register: promtail_targets
+  tags:
+    - deploy
+    - verify
+
+- name: Display deployment status
+  ansible.builtin.debug:
+    msg: |
+      ========================================
+      Monitoring stack deployed successfully!
+      ========================================
+      
+      Access URLs:
+      - Grafana: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ grafana_port }}
+      - Prometheus: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ prometheus_port }}
+      - Loki: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ loki_port }}
+      - Promtail: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ promtail_port }}
+      {% if python_app_enabled %}
+      - Python App: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ python_app_port }}
+      {% endif %}
+      
+      Credentials:
+      - Username: {{ grafana_admin_user }}
+      - Password: (stored in {{ monitoring_dir }}/.env)
+      
+      Services Status:
+      - Prometheus: {{ 'Ready' if prometheus_ready.status == 200 else 'Not Ready' }}
+      - Loki: {{ 'Ready' if loki_ready.status == 200 else 'Not Ready' }}
+      - Promtail: {{ 'Ready' if promtail_ready.status == 200 else 'Not Ready' }}
+      - Grafana: {{ 'Ready' if grafana_ready.status == 200 else 'Not Ready' }}
+      - Active Promtail targets: {{ promtail_targets.json.activeTargets | length | default(0) }}
+      
+      Next Steps:
+      1. Access Grafana and verify Loki datasource
+      2. Navigate to Explore: {job="docker"}
+      3. Create dashboards
+      
+      ========================================
+  tags:
+    - deploy
+    - verify
+
+- name: Save deployment summary to file
+  ansible.builtin.copy:
+    content: |
+      Monitoring Stack Deployment Summary
+      ====================================
+      Deployment Date: {{ ansible_date_time.iso8601 }}
+      Deployed by: {{ ansible_user | default('unknown') }}
+      Host: {{ ansible_hostname }}
+      
+      Service Versions:
+      - Prometheus: {{ prometheus_version }}
+      - Loki: {{ loki_version }}
+      - Promtail: {{ promtail_version }}
+      - Grafana: {{ grafana_version }}
+      
+      Access URLs:
+      - Prometheus: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ prometheus_port }}
+      - Grafana: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ grafana_port }}
+      - Loki: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ loki_port }}
+      - Promtail: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ promtail_port }}
+      
+      Configuration:
+      - Prometheus retention: {{ prometheus_retention_days }} days, {{ prometheus_retention_size }}
+      - Retention Period: {{ loki_retention_period }}
+      - Prometheus Port: {{ prometheus_port }}
+      - Loki Port: {{ loki_port }}
+      - Grafana Port: {{ grafana_port }}
+      - Promtail Port: {{ promtail_port }}
+      
+      Health Status:
+      - All services: Healthy
+      - Deployment: Success
+    dest: "{{ monitoring_dir }}/docs/deployment-summary.txt"
+    mode: '0644'
+  tags:
+    - deploy
+    - docs

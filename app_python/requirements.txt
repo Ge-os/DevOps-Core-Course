@@ -4,3 +4,5 @@ pytest
 pytest-cov
 httpx==0.28.1
 ruff
+python-json-logger==3.2.1
+prometheus-client==0.23.1

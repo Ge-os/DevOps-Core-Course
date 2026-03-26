@@ -1,0 +1,3 @@
+name: devops-lab04-pulumi
+runtime: python
+description: Infrastructure as Code for DevOps Lab 04 using Pulumi

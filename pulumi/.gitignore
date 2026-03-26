@@ -1,0 +1,34 @@
+# Pulumi
+*.pyc
+__pycache__/
+venv/
+.venv/
+*.egg-info/
+
+# Cloud credentials
+*.pem
+*.key
+*.json
+credentials
+key.json
+service-account-key.json
+
+# Pulumi state and config
+Pulumi.*.yaml
+!Pulumi.yaml
+!Pulumi.dev.yaml.example
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

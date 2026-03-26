@@ -1,0 +1,20 @@
+---
+common_packages:
+  - python3-pip
+  - curl
+  - git
+  - vim
+  - htop
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - apt-transport-https
+
+common_timezone: "UTC"
+
+# Users managed by the common role
+common_users:
+  - name: devops
+    shell: /bin/bash
+    groups:
+      - sudo

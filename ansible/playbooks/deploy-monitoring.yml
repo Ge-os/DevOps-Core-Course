@@ -1,0 +1,105 @@
+---
+# Deploy Loki Monitoring Stack
+# This playbook deploys the complete observability stack with Prometheus, Loki, Promtail, and Grafana
+
+- name: Deploy Observability Monitoring Stack
+  hosts: all
+  become: true
+  
+  vars:
+    # Override defaults here if needed
+    grafana_anonymous_enabled: false
+    loki_retention_period: "168h"
+    python_app_enabled: true
+    
+    # Uncomment to override versions
+    # loki_version: "3.0.0"
+    # promtail_version: "3.0.0"
+    # grafana_version: "11.3.1"
+    
+    # Uncomment to override ports
+    # loki_port: 3100
+    # grafana_port: 3000
+    # promtail_port: 9080
+  
+  roles:
+    - role: monitoring
+      tags:
+        - monitoring
+        - loki
+
+  post_tasks:
+    - name: Display access information
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          Monitoring Stack Deployed Successfully!
+          ========================================
+          
+          Services:
+          - Grafana: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ grafana_port }}
+          - Prometheus: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ prometheus_port }}
+          - Loki API: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ loki_port }}
+          - Promtail: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ promtail_port }}
+          {% if python_app_enabled %}
+          - Python App: http://{{ ansible_default_ipv4.address | default('localhost') }}:{{ python_app_port }}
+          {% endif %}
+          
+          Credentials:
+          - Username: {{ grafana_admin_user }}
+          - Password: (check {{ monitoring_dir }}/.env on target host)
+          
+          Configuration:
+          - Prometheus Version: {{ prometheus_version }}
+          - Prometheus Retention: {{ prometheus_retention_days }}d / {{ prometheus_retention_size }}
+          - Log Retention: {{ loki_retention_period }}
+          - Loki Version: {{ loki_version }}
+          - Grafana Version: {{ grafana_version }}
+          
+          Next Steps:
+          1. Open Prometheus targets page and verify all jobs are UP
+          2. Access Grafana web UI and verify Loki + Prometheus datasources
+          3. Open pre-provisioned logs and metrics dashboards
+          4. Generate app traffic and validate live metrics/log streams
+          5. Take screenshots for Lab 8 documentation
+          
+          Useful Commands:
+          - View logs: docker compose -f {{ monitoring_dir }}/docker-compose.yml logs -f
+          - Restart:   docker compose -f {{ monitoring_dir }}/docker-compose.yml restart
+          - Stop all:  docker compose -f {{ monitoring_dir }}/docker-compose.yml down
+          
+          ========================================
+      tags:
+        - always
+
+    - name: Create verification script on target
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Quick verification script for monitoring stack
+          
+          echo "Checking monitoring stack..."
+          echo ""
+          
+          echo "1. Service Status:"
+          docker compose -f {{ monitoring_dir }}/docker-compose.yml ps
+          echo ""
+          
+          echo "2. Loki Health:"
+          curl -s http://localhost:{{ loki_port }}/ready
+          echo ""
+          
+          echo "3. Promtail Targets:"
+          curl -s http://localhost:{{ promtail_port }}/targets | jq '.activeTargets | length'
+          echo " active targets"
+          echo ""
+          
+          echo "4. Grafana Health:"
+          curl -s http://localhost:{{ grafana_port }}/api/health | jq .
+          echo ""
+          
+          echo "All checks completed!"
+        dest: "{{ monitoring_dir }}/verify.sh"
+        mode: '0755'
+      tags:
+        - scripts
