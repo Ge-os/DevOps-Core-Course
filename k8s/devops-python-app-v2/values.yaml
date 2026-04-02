@@ -1,0 +1,53 @@
+replicaCount: 2
+
+image:
+  repository: ge0s1/devops-python-app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+container:
+  port: 5000
+
+env:
+  - name: HOST
+    value: 0.0.0.0
+  - name: PORT
+    value: "5000"
+  - name: DEBUG
+    value: "false"
+  - name: LOG_LEVEL
+    value: INFO
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+nameOverride: ""
+fullnameOverride: ""
