@@ -17,3 +17,34 @@ app.kubernetes.io/component: api
 {{- define "devops-python-app.selectorLabels" -}}
 {{ include "common.selectorLabels" . }}
 {{- end -}}
+
+{{- define "devops-python-app.serviceAccountName" -}}
+{{- if .Values.serviceAccount.name -}}
+{{- .Values.serviceAccount.name -}}
+{{- else if .Values.serviceAccount.create -}}
+{{- include "devops-python-app.fullname" . -}}
+{{- else -}}
+default
+{{- end -}}
+{{- end -}}
+
+{{- define "devops-python-app.secretName" -}}
+{{- if .Values.secret.name -}}
+{{- .Values.secret.name -}}
+{{- else -}}
+{{- include "devops-python-app.fullname" . -}}-secret
+{{- end -}}
+{{- end -}}
+
+{{- define "devops-python-app.commonEnv" -}}
+- name: HOST
+  value: {{ .Values.appConfig.host | quote }}
+- name: PORT
+  value: {{ .Values.appConfig.port | quote }}
+- name: DEBUG
+  value: {{ .Values.appConfig.debug | quote }}
+- name: APP_ENV
+  value: {{ .Values.appConfig.appEnv | quote }}
+- name: LOG_LEVEL
+  value: {{ .Values.appConfig.logLevel | quote }}
+{{- end -}}

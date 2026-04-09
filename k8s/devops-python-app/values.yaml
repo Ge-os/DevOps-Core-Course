@@ -14,15 +14,42 @@ service:
 container:
   port: 5000
 
-env:
-  - name: HOST
-    value: 0.0.0.0
-  - name: PORT
-    value: "5000"
-  - name: DEBUG
-    value: "false"
-  - name: LOG_LEVEL
-    value: INFO
+appConfig:
+  host: 0.0.0.0
+  port: "5000"
+  debug: "false"
+  appEnv: development
+  logLevel: INFO
+
+extraEnv: []
+
+secret:
+  enabled: true
+  type: Opaque
+  name: ""
+  data:
+    username: __PLACEHOLDER_USERNAME__
+    password: __PLACEHOLDER_PASSWORD__
+    api_key: __PLACEHOLDER_API_KEY__
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+vault:
+  enabled: false
+  role: devops-python-app-role
+  secretPath: secret/data/myapp/config
+  fileName: config
+  mountPath: /vault/secrets
+  injectCommand: echo Vault secret rendered to /vault/secrets/config
+  template: |
+    {{- with secret "secret/data/myapp/config" -}}
+    APP_USERNAME={{ .Data.data.username }}
+    APP_PASSWORD={{ .Data.data.password }}
+    API_KEY={{ .Data.data.api_key }}
+    {{- end -}}
 
 resources:
   requests:
