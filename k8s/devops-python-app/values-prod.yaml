@@ -3,9 +3,16 @@ replicaCount: 3
 image:
   tag: "1.0.0"
 
+appConfig:
+  appEnv: production
+  logLevel: INFO
+
 service:
   type: LoadBalancer
   nodePort: null
+
+persistence:
+  size: 1Gi
 
 resources:
   requests:

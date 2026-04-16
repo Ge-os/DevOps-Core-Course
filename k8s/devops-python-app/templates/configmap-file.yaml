@@ -1,0 +1,12 @@
+{{- if .Values.configMap.file.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "devops-python-app.configFileConfigMapName" . }}
+  labels:
+    {{- include "devops-python-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+data:
+  {{ .Values.configMap.file.fileName }}: |-
+{{ .Files.Get "files/config.json" | nindent 4 }}
+{{- end }}

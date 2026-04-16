@@ -20,8 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
-# Change ownership of the application files to the non-root user
-RUN chown -R appuser:appuser /app
+# Prepare writable data directory for persistent visits storage
+RUN mkdir -p /data && chown -R appuser:appuser /app /data
 
 # Switch to non-root user
 USER appuser
