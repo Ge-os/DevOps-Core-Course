@@ -19,8 +19,15 @@ spec:
       labels:
         {{- include "devops-python-app.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: api
-      {{- if .Values.vault.enabled }}
+      {{- if or .Values.configMap.file.enabled .Values.configMap.env.enabled .Values.vault.enabled }}
       annotations:
+        {{- if .Values.configMap.file.enabled }}
+        checksum/config-file: {{ .Files.Get "files/config.json" | sha256sum }}
+        {{- end }}
+        {{- if .Values.configMap.env.enabled }}
+        checksum/config-env: {{ printf "%s|%s|%s" .Values.appConfig.appEnv .Values.appConfig.logLevel (toYaml .Values.configMap.env.data) | sha256sum }}
+        {{- end }}
+        {{- if .Values.vault.enabled }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: {{ .Values.vault.role | quote }}
         {{ printf "vault.hashicorp.com/agent-inject-secret-%s" .Values.vault.fileName | quote }}: {{ .Values.vault.secretPath | quote }}
@@ -28,6 +35,7 @@ spec:
         {{ printf "vault.hashicorp.com/agent-inject-command-%s" .Values.vault.fileName | quote }}: {{ .Values.vault.injectCommand | quote }}
         {{ printf "vault.hashicorp.com/agent-inject-template-%s" .Values.vault.fileName | quote }}: |
 {{ .Values.vault.template | nindent 10 }}
+        {{- end }}
       {{- end }}
     spec:
       serviceAccountName: {{ include "devops-python-app.serviceAccountName" . }}
@@ -44,10 +52,28 @@ spec:
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          {{- if .Values.secret.enabled }}
+          {{- if or .Values.secret.enabled .Values.configMap.env.enabled }}
           envFrom:
+            {{- if .Values.secret.enabled }}
             - secretRef:
                 name: {{ include "devops-python-app.secretName" . }}
+            {{- end }}
+            {{- if .Values.configMap.env.enabled }}
+            - configMapRef:
+                name: {{ include "devops-python-app.configEnvConfigMapName" . }}
+            {{- end }}
+          {{- end }}
+          {{- if or .Values.configMap.file.enabled .Values.persistence.enabled }}
+          volumeMounts:
+            {{- if .Values.configMap.file.enabled }}
+            - name: app-config
+              mountPath: {{ .Values.configMap.file.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: app-data
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -55,3 +81,16 @@ spec:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
+      {{- if or .Values.configMap.file.enabled .Values.persistence.enabled }}
+      volumes:
+        {{- if .Values.configMap.file.enabled }}
+        - name: app-config
+          configMap:
+            name: {{ include "devops-python-app.configFileConfigMapName" . }}
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: app-data
+          persistentVolumeClaim:
+            claimName: {{ include "devops-python-app.pvcName" . }}
+        {{- end }}
+      {{- end }}

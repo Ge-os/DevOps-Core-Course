@@ -3,9 +3,16 @@ replicaCount: 1
 image:
   tag: latest
 
+appConfig:
+  appEnv: development
+  logLevel: DEBUG
+
 service:
   type: NodePort
   nodePort: 30080
+
+persistence:
+  size: 100Mi
 
 resources:
   requests:

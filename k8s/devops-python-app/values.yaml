@@ -21,6 +21,28 @@ appConfig:
   appEnv: development
   logLevel: INFO
 
+configMap:
+  file:
+    enabled: true
+    name: ""
+    fileName: config.json
+    mountPath: /config
+  env:
+    enabled: true
+    name: ""
+    data:
+      APP_NAME: devops-info-service
+      FEATURE_VISITS_COUNTER: "true"
+
+persistence:
+  enabled: true
+  name: ""
+  accessMode: ReadWriteOnce
+  size: 100Mi
+  storageClass: ""
+  mountPath: /data
+  visitsFileName: visits
+
 extraEnv: []
 
 secret:
