@@ -1,0 +1,27 @@
+{{- if .Values.hooks.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "devops-python-app.fullname" . }}-post-install"
+  labels:
+    {{- include "devops-python-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "{{ .Values.hooks.postInstall.weight }}"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        {{- include "devops-python-app.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: post-install-job
+          image: {{ .Values.hooks.image }}
+          command:
+            - sh
+            - -c
+            - {{ .Values.hooks.postInstall.command | quote }}
+{{- end }}
