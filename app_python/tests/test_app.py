@@ -2,6 +2,7 @@
 Unit tests for the DevOps Info Service application.
 Tests all endpoints with comprehensive coverage.
 """
+import os
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime
@@ -9,10 +10,19 @@ from datetime import datetime
 from app import app
 
 
+@pytest.fixture(autouse=True)
+def isolated_visits_file(monkeypatch, tmp_path):
+    """Use an isolated visits file for each test to avoid cross-test interference."""
+    visits_file = tmp_path / "visits"
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("VISITS_FILE", str(visits_file))
+
+
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI application."""
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 class TestRootEndpoint:
@@ -89,7 +99,7 @@ class TestRootEndpoint:
         
         required_fields = [
             "uptime_seconds", "uptime_human", 
-            "current_time", "timezone"
+            "current_time", "timezone", "visits"
         ]
         for field in required_fields:
             assert field in runtime
@@ -110,6 +120,10 @@ class TestRootEndpoint:
         
         # Timezone should be UTC
         assert runtime["timezone"] == "UTC"
+
+        # Visits should be a non-negative integer
+        assert isinstance(runtime["visits"], int)
+        assert runtime["visits"] >= 0
     
     def test_runtime_current_time_format(self, client):
         """Test that current_time is in ISO format."""
@@ -187,6 +201,7 @@ class TestRootEndpoint:
         # Should include / and /health
         assert "/" in paths
         assert "/health" in paths
+        assert "/visits" in paths
 
 
 class TestHealthEndpoint:
@@ -340,3 +355,46 @@ class TestResponseConsistency:
         # Status should always be healthy
         assert data1["status"] == "healthy"
         assert data2["status"] == "healthy"
+
+
+class TestVisitsEndpoint:
+    """Tests for the /visits endpoint and persistent counter behavior."""
+
+    def test_visits_status_code(self, client):
+        """Test that visits endpoint returns 200 OK."""
+        response = client.get("/visits")
+        assert response.status_code == 200
+
+    def test_visits_response_structure(self, client):
+        """Test that visits endpoint has required fields."""
+        response = client.get("/visits")
+        data = response.json()
+
+        assert "visits" in data
+        assert "visits_file" in data
+        assert isinstance(data["visits"], int)
+        assert data["visits"] >= 0
+        assert data["visits_file"].endswith(os.path.sep + "visits")
+
+    def test_root_increments_visits_counter(self, client):
+        """Test that each root request increments the persistent visits counter."""
+        initial = client.get("/visits").json()["visits"]
+
+        client.get("/")
+
+        after_increment = client.get("/visits").json()["visits"]
+        assert after_increment == initial + 1
+
+    def test_visits_persist_across_client_restart(self, monkeypatch, tmp_path):
+        """Test that counter value survives TestClient restart when using same file."""
+        visits_file = tmp_path / "persisted_visits"
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        monkeypatch.setenv("VISITS_FILE", str(visits_file))
+
+        with TestClient(app) as client_first:
+            client_first.get("/")
+            client_first.get("/")
+
+        with TestClient(app) as client_second:
+            data = client_second.get("/visits").json()
+            assert data["visits"] >= 2

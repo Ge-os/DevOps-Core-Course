@@ -7,6 +7,7 @@ import sys
 import socket
 import platform
 import logging
+from threading import Lock
 from time import perf_counter
 from datetime import datetime, timezone
 from typing import Dict, Any
@@ -39,6 +40,11 @@ logger.addHandler(json_handler)
 
 # Application startup time
 start_time = datetime.now(timezone.utc)
+visits_lock = Lock()
+
+# Persistent visits counter configuration
+DEFAULT_DATA_DIR = os.getenv('DATA_DIR', '/data')
+DEFAULT_VISITS_FILE = os.getenv('VISITS_FILE', os.path.join(DEFAULT_DATA_DIR, 'visits'))
 
 # Prometheus metrics (RED method + app-specific metrics)
 http_requests_total = Counter(
@@ -161,6 +167,81 @@ def get_system_info() -> Dict[str, Any]:
     }
 
 
+def get_visits_file_path() -> str:
+    """Get visits file path from environment with a safe default."""
+    return os.getenv('VISITS_FILE', DEFAULT_VISITS_FILE)
+
+
+def _atomic_write_text(file_path: str, content: str) -> None:
+    """Write file content atomically to avoid partial updates."""
+    temp_file_path = f"{file_path}.tmp"
+    with open(temp_file_path, 'w', encoding='utf-8') as temp_file:
+        temp_file.write(content)
+    os.replace(temp_file_path, file_path)
+
+
+def _ensure_visits_storage(visits_file_path: str) -> None:
+    """Ensure visits counter file exists and contains a valid integer."""
+    visits_dir = os.path.dirname(visits_file_path)
+    if visits_dir:
+        os.makedirs(visits_dir, exist_ok=True)
+
+    if not os.path.exists(visits_file_path):
+        _atomic_write_text(visits_file_path, '0\n')
+        logger.info('Visits counter initialized', extra={
+            'visits_file': visits_file_path,
+            'visits_count': 0,
+        })
+        return
+
+    try:
+        with open(visits_file_path, 'r', encoding='utf-8') as visits_file:
+            int((visits_file.read().strip() or '0'))
+    except (OSError, ValueError):
+        logger.warning('Visits counter file was invalid and has been reset', extra={
+            'visits_file': visits_file_path,
+        })
+        _atomic_write_text(visits_file_path, '0\n')
+
+
+def get_visits_count() -> int:
+    """Read current visits count from persistent storage."""
+    visits_file_path = get_visits_file_path()
+
+    with visits_lock:
+        _ensure_visits_storage(visits_file_path)
+        try:
+            with open(visits_file_path, 'r', encoding='utf-8') as visits_file:
+                return int((visits_file.read().strip() or '0'))
+        except (OSError, ValueError):
+            logger.warning('Visits counter read failed, resetting to 0', extra={
+                'visits_file': visits_file_path,
+            })
+            _atomic_write_text(visits_file_path, '0\n')
+            return 0
+
+
+def increment_visits_count() -> int:
+    """Increment visits count and persist the new value."""
+    visits_file_path = get_visits_file_path()
+
+    with visits_lock:
+        _ensure_visits_storage(visits_file_path)
+
+        try:
+            with open(visits_file_path, 'r', encoding='utf-8') as visits_file:
+                current_count = int((visits_file.read().strip() or '0'))
+        except (OSError, ValueError):
+            logger.warning('Visits counter read failed during increment, resetting to 0', extra={
+                'visits_file': visits_file_path,
+            })
+            current_count = 0
+
+        new_count = current_count + 1
+        _atomic_write_text(visits_file_path, f'{new_count}\n')
+        return new_count
+
+
 @app.get("/")
 async def root(request: Request) -> Dict[str, Any]:
     """
@@ -170,6 +251,7 @@ async def root(request: Request) -> Dict[str, Any]:
         Dict containing service, system, runtime, request info and available endpoints
     """
     devops_info_endpoint_calls_total.labels(endpoint="/").inc()
+    visits_count = increment_visits_count()
 
     system_info_start = perf_counter()
     system_info = get_system_info()
@@ -189,7 +271,8 @@ async def root(request: Request) -> Dict[str, Any]:
             "uptime_seconds": uptime['seconds'],
             "uptime_human": uptime['human'],
             "current_time": datetime.now(timezone.utc).isoformat(),
-            "timezone": "UTC"
+            "timezone": "UTC",
+            "visits": visits_count
         },
         "request": {
             "client_ip": request.client.host if request.client else "unknown",
@@ -212,6 +295,11 @@ async def root(request: Request) -> Dict[str, Any]:
                 "path": "/metrics",
                 "method": "GET",
                 "description": "Prometheus metrics"
+            },
+            {
+                "path": "/visits",
+                "method": "GET",
+                "description": "Current visits counter"
             }
         ]
     }
@@ -243,14 +331,29 @@ async def metrics() -> Response:
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
+@app.get("/visits")
+async def visits() -> Dict[str, Any]:
+    """Return current visits counter value from persistent storage."""
+    devops_info_endpoint_calls_total.labels(endpoint="/visits").inc()
+    return {
+        'visits': get_visits_count(),
+        'visits_file': get_visits_file_path(),
+    }
+
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():
     """Log application startup"""
+    visits_file_path = get_visits_file_path()
+    with visits_lock:
+        _ensure_visits_storage(visits_file_path)
+
     logger.info("Application started successfully", extra={
         "service": "devops-info-service",
         "version": "1.0.0",
-        "startup_time": start_time.isoformat()
+        "startup_time": start_time.isoformat(),
+        "visits_file": visits_file_path,
     })
 
 
