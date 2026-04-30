@@ -1,17 +1,13 @@
-{{- if not .Values.rollout.enabled }}
-apiVersion: apps/v1
-kind: Deployment
+{{- if .Values.rollout.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "devops-python-app.fullname" . }}
   labels:
     {{- include "devops-python-app.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+  revisionHistoryLimit: {{ .Values.rollout.revisionHistoryLimit }}
   selector:
     matchLabels:
       {{- include "devops-python-app.selectorLabels" . | nindent 6 }}
@@ -95,4 +91,32 @@ spec:
             claimName: {{ include "devops-python-app.pvcName" . }}
         {{- end }}
       {{- end }}
+  strategy:
+    {{- if eq .Values.rollout.strategy "canary" }}
+    canary:
+      {{- if .Values.rollout.canary.useAnalysis }}
+      steps:
+        - setWeight: 20
+        - analysis:
+            templates:
+              - templateName: {{ include "devops-python-app.fullname" . }}-health-check
+        - setWeight: 50
+        - pause: { duration: 30s }
+        - analysis:
+            templates:
+              - templateName: {{ include "devops-python-app.fullname" . }}-health-check
+        - setWeight: 100
+      {{- else }}
+      steps:
+        {{- toYaml .Values.rollout.canary.steps | nindent 8 }}
+      {{- end }}
+    {{- else if eq .Values.rollout.strategy "blueGreen" }}
+    blueGreen:
+      activeService: {{ include "devops-python-app.fullname" . }}-service
+      previewService: {{ include "devops-python-app.fullname" . }}-service-preview
+      autoPromotionEnabled: {{ .Values.rollout.blueGreen.autoPromotionEnabled }}
+      {{- if .Values.rollout.blueGreen.autoPromotionSeconds }}
+      autoPromotionSeconds: {{ .Values.rollout.blueGreen.autoPromotionSeconds }}
+      {{- end }}
+    {{- end }}
 {{- end }}

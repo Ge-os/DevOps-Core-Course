@@ -101,6 +101,28 @@ livenessProbe:
   failureThreshold: 3
   successThreshold: 1
 
+rollout:
+  enabled: true
+  revisionHistoryLimit: 3
+  strategy: canary
+  canary:
+    steps:
+      - setWeight: 20
+      - pause: {}
+      - setWeight: 40
+      - pause: { duration: 30s }
+      - setWeight: 60
+      - pause: { duration: 30s }
+      - setWeight: 80
+      - pause: { duration: 30s }
+      - setWeight: 100
+    useAnalysis: false
+  blueGreen:
+    autoPromotionEnabled: false
+    autoPromotionSeconds: null
+  analysis:
+    enabled: false
+
 hooks:
   enabled: true
   image: busybox:1.36
