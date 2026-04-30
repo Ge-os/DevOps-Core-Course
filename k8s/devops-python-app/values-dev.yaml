@@ -1,5 +1,10 @@
 replicaCount: 1
 
+rollout:
+  strategy: canary
+  blueGreen:
+    autoPromotionEnabled: false
+
 image:
   tag: latest
 

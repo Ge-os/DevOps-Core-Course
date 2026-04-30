@@ -1,0 +1,50 @@
+{{- if and .Values.rollout.enabled .Values.rollout.analysis.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "devops-python-app.fullname" . }}-health-check
+  labels:
+    {{- include "devops-python-app.labels" . | nindent 4 }}
+spec:
+  metrics:
+    - name: health-check
+      interval: 10s
+      count: 5
+      successCondition: result == "ok"
+      failureLimit: 3
+      provider:
+        web:
+          url: http://{{ include "devops-python-app.fullname" . }}-service.{{ .Release.Namespace }}.svc.cluster.local/health
+          jsonPath: "{$.status}"
+          timeoutSeconds: 5
+    - name: canary-health
+      interval: 15s
+      count: 3
+      successCondition: result == "ok"
+      failureLimit: 2
+      provider:
+        web:
+          url: http://{{ include "devops-python-app.fullname" . }}-service-preview.{{ .Release.Namespace }}.svc.cluster.local/health
+          jsonPath: "{$.status}"
+          timeoutSeconds: 5
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "devops-python-app.fullname" . }}-error-rate
+  labels:
+    {{- include "devops-python-app.labels" . | nindent 4 }}
+spec:
+  metrics:
+    - name: error-rate
+      interval: 30s
+      count: 3
+      successCondition: default(result, 0) < 0.05
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "http://prometheus-server.monitoring.svc.cluster.local:9090"
+          query: |
+            sum(rate(http_requests_total{status=~"5.*"}[1m])) /
+            sum(rate(http_requests_total[1m]))
+{{- end }}
