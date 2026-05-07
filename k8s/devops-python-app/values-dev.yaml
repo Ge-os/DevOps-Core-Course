@@ -1,11 +1,29 @@
 replicaCount: 1
 
+statefulset:
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+
+rollout:
+  enabled: false
+  strategy: canary
+
 image:
   tag: latest
+
+appConfig:
+  appEnv: development
+  logLevel: DEBUG
 
 service:
   type: NodePort
   nodePort: 30080
+
+persistence:
+  size: 100Mi
 
 resources:
   requests:

@@ -67,6 +67,7 @@ DEBUG=true python app.py
 Once running, access the service at:
 - **Main endpoint**: http://localhost:5000/
 - **Health check**: http://localhost:5000/health
+- **Visits counter**: http://localhost:5000/visits
 - **Prometheus metrics**: http://localhost:5000/metrics
 - **Interactive API docs**: http://localhost:5000/docs
 
@@ -83,8 +84,20 @@ docker build -t devops-info-service .
 Run the container mapping port 5000:
 
 ```bash
-docker run -p 5000:5000 devops-info-service
+docker run -p 5000:5000 -v "${PWD}/data:/data" devops-info-service
 ```
+
+### Run with Docker Compose (Recommended for persistence)
+
+```bash
+docker compose up --build -d
+curl http://localhost:5000/
+curl http://localhost:5000/visits
+docker compose restart
+curl http://localhost:5000/visits
+```
+
+The visits counter is stored in `./data/visits` on your host and survives container restarts.
 
 ### Push to Docker Hub
 
@@ -126,7 +139,8 @@ Returns comprehensive service and system information.
     "uptime_seconds": 500,
     "uptime_human": "12 hours, 8 minutes",
     "current_time": "2026-01-28T19:18:42.601851+00:00",
-    "timezone": "UTC"
+    "timezone": "UTC",
+    "visits": 42
   },
   "request": {
     "client_ip": "127.0.0.1",
@@ -144,6 +158,16 @@ Returns comprehensive service and system information.
       "path": "/health",
       "method": "GET",
       "description": "Health check"
+    },
+    {
+      "path": "/metrics",
+      "method": "GET",
+      "description": "Prometheus metrics"
+    },
+    {
+      "path": "/visits",
+      "method": "GET",
+      "description": "Current visits counter"
     }
   ]
 }
@@ -174,6 +198,20 @@ Exposes Prometheus-compatible metrics for monitoring.
 
 **Status Code:** 200 OK
 
+### GET `/visits`
+
+Returns the current persisted visits counter.
+
+**Response:**
+```json
+{
+  "visits": 42,
+  "visits_file": "/data/visits"
+}
+```
+
+**Status Code:** 200 OK
+
 ## Configuration
 
 The application supports the following environment variables:
@@ -183,6 +221,9 @@ The application supports the following environment variables:
 | `HOST` | `0.0.0.0` | Host address to bind the server |
 | `PORT` | `5000` | Port number to listen on |
 | `DEBUG` | `False` | Enable debug mode with auto-reload |
+| `LOG_LEVEL` | `INFO` | JSON log level |
+| `DATA_DIR` | `/data` | Directory for persistent data files |
+| `VISITS_FILE` | `/data/visits` | Full path to visits counter file |
 
 ## Technology Stack
 
@@ -195,6 +236,8 @@ The application supports the following environment variables:
 ```
 app_python/
 ├── app.py                    # Main application
+├── docker-compose.yml         # Local container orchestration
+├── data/                      # Local persistent data directory
 ├── requirements.txt          # All dependencies
 ├── .gitignore                # Git ignore rules
 ├── README.md                 # This file
@@ -249,6 +292,8 @@ pytest --cov=. --cov-report=html
 Tests are organized by endpoint functionality:
 - `TestRootEndpoint`: Tests for the main `/` endpoint
 - `TestHealthEndpoint`: Tests for the `/health` endpoint
+- `TestMetricsEndpoint`: Tests for the `/metrics` endpoint
+- `TestVisitsEndpoint`: Tests for the `/visits` endpoint and persistence behavior
 - `TestErrorHandling`: Tests for error scenarios
 - `TestResponseConsistency`: Tests for response consistency
 

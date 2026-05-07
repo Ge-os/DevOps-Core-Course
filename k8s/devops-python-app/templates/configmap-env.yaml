@@ -1,0 +1,15 @@
+{{- if .Values.configMap.env.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "devops-python-app.configEnvConfigMapName" . }}
+  labels:
+    {{- include "devops-python-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+data:
+  APP_ENV: {{ .Values.appConfig.appEnv | quote }}
+  LOG_LEVEL: {{ .Values.appConfig.logLevel | quote }}
+  {{- with .Values.configMap.env.data }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}
